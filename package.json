@@ -29,6 +29,7 @@
   },
   "scripts": {
     "build": "tsc && esbuild ./src/index.ts --outdir=dist",
-    "test": "tsx ./test/TestStyler.ts"
+    "test": "tsx ./test/TestStyler.ts",
+    "prepublishOnly": "yarn build"
   }
 }
