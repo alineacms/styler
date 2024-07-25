@@ -13,13 +13,14 @@ export type Variant<VariantNames extends string = string> =
 
 export interface Styler<VariantNames extends string = string> {
   (...variants: Array<Variant<VariantNames>>): string
+  /** @deprecated use styler.global */
   with(...extra: Array<string | Styler | undefined>): Styler
+  /** @deprecated use styler.merge */
   mergeProps(attrs: Record<string, any> | undefined): Styler
   toString(): string
 }
 
-type GenericStyler = Styler & {[key: string]: GenericStyler}
-export type GenericStyles = Record<string, GenericStyler>
+export type GenericStyles = Styler & {[key: string]: GenericStyles}
 
 type Style<State> = string extends State
   ? GenericStyles
@@ -35,25 +36,26 @@ type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
   ? I
   : never
 
-export type ModuleStyles<M> = {} extends M
+export type ModuleStyles<M = {}> = {} extends M
   ? GenericStyles
   : UnionToIntersection<Style<keyof M>>
 
-export function mergeProps(props: {className?: string}) {
-  return global(props.className)
-}
-
-export function global(className: string) {
-  return {[hasClassName]: className}
-}
-
 const VARIANT_PREFIX = 'is-'
 
+export function styler<Module extends Record<string, string>>(
+  styles: Module
+): ModuleStyles<Module>
 export function styler<VariantNames extends string = string>(
-  className = '',
-  globals = [],
+  className?: string,
+  globals?: Array<string>,
   module?: Record<string, string>
-): Styler<VariantNames> {
+): Styler<VariantNames>
+export function styler(
+  input: string | Record<string, string>,
+  globals = [],
+  module: Record<string, string> = typeof input === 'object' ? input : undefined
+): Styler | ModuleStyles {
+  const className = typeof input === 'string' ? input : ''
   const result = module?.[className] ?? className
   return new Proxy(
     Object.assign(
@@ -108,8 +110,17 @@ export function styler<VariantNames extends string = string>(
   )
 }
 
+styler.global = (className: string) => {
+  return {[hasClassName]: className}
+}
+
+styler.merge = (props: {className?: string}) => {
+  return styler.global(props.className)
+}
+
+/** @deprecated use the styler function */
 export const fromModule = <Module extends Record<string, string>>(
   styles: Module
-) => {
-  return styler(undefined, undefined, styles) as ModuleStyles<Module>
-}
+) => styler(styles)
+
+export default styler

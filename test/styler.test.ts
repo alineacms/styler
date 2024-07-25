@@ -1,16 +1,16 @@
 import {expect, test} from 'bun:test'
-import {fromModule, global, mergeProps, styler} from '../src'
+import styler from '../src'
 
 test('styler', () => {
   const styles = styler('root')
   expect(styles()).toBe('root')
   expect(styles.with('a b')()).toBe('a b root')
-  expect(styles(global('a b'))).toBe('a b root')
-  expect(styles(false && global('a b'))).toBe('root')
+  expect(styles(styler.global('a b'))).toBe('a b root')
+  expect(styles(false && styler.global('a b'))).toBe('root')
   expect(styles.with(styles)()).toBe('root root')
   expect(styles(styles)).toBe('root root')
   expect(styles.mergeProps({className: 'x'})()).toBe('x root')
-  expect(styles(mergeProps({className: 'x'}))).toBe('x root')
+  expect(styles(styler.merge({className: 'x'}))).toBe('x root')
   expect(styles({a: true})).toBe('is-a root')
   expect(styles({a: true, b: true})).toBe('is-a is-b root')
   expect(styles({a: true, b: true, c: false})).toBe('is-a is-b root')
@@ -30,7 +30,7 @@ const module = {
 }
 
 test('fromModule', () => {
-  const styles = fromModule(module)
+  const styles = styler(module)
   expect(styles.root()).toBe('__root')
   expect(styles.root.sub()).toBe('__root-sub')
   expect(styles.root.sub.sub()).toBe('__root-sub-sub')
