@@ -1,16 +1,25 @@
-type VariantImpl<T extends string> = T | {[K in T]?: boolean}
-export type Variant<T extends string> = VariantImpl<T> | Array<VariantImpl<T>>
+const hasClassName = Symbol()
+type VariantImpl<VariantNames extends string> =
+  | VariantNames
+  | {[Key in VariantNames]?: boolean}
+  | {[hasClassName]: string}
+  | Styler
+  | false
+  | undefined
+  | null
+export type Variant<VariantNames extends string = string> =
+  | VariantImpl<VariantNames>
+  | Array<VariantImpl<VariantNames>>
 
-export interface Styler {
-  (...state: Array<Variant<any>>): string
+export interface Styler<VariantNames extends string = string> {
+  (...variants: Array<Variant<VariantNames>>): string
   with(...extra: Array<string | Styler | undefined>): Styler
-  mergeProps(attrs: {[key: string]: any} | undefined): Styler
-  toSelector(): string
+  mergeProps(attrs: Record<string, any> | undefined): Styler
   toString(): string
 }
 
 type GenericStyler = Styler & {[key: string]: GenericStyler}
-export type GenericStyles = {[key: string]: GenericStyler}
+export type GenericStyles = Record<string, GenericStyler>
 
 type Style<State> = string extends State
   ? GenericStyles
@@ -30,106 +39,77 @@ export type ModuleStyles<M> = {} extends M
   ? GenericStyles
   : UnionToIntersection<Style<keyof M>>
 
-const cache = new Map()
-
-const variant = (
-  key: string,
-  selector: Styler,
-  states: Array<Variant<any>>,
-  variants?: Map<string, string>
-) => {
-  const getVariant = (name: string) => {
-    const variant = `${key}-${name}`
-    return (variants && variants.get(variant)) || variant
-  }
-  const additions: Array<string> = []
-  for (const state of states) {
-    if (!state) continue
-    if (Array.isArray(state)) additions.push(...state.map(getVariant))
-    else if (typeof state === 'object')
-      additions.push(
-        ...Object.entries(state)
-          .map(([cl, active]) => active && cl)
-          .filter(Boolean)
-          .map(_ => getVariant(_ as any))
-      )
-    else additions.push(getVariant(state))
-  }
-  return additions.concat(String(selector)).join(' ')
+export function mergeProps(props: {className?: string}) {
+  return global(props.className)
 }
 
-const createStyler = (
-  input: any,
-  value: string,
-  variants?: Map<string, string>
-) => {
-  Object.defineProperties(input, {
-    with: {
-      enumerable: false,
-      value(...extra: Array<string | Styler>) {
-        return styler(
-          ([] as Array<string | Styler>)
-            .concat(extra)
-            .concat(value)
-            .filter(v => v)
-            .join(' '),
-          variants
-        )
+export function global(className: string) {
+  return {[hasClassName]: className}
+}
+
+const VARIANT_PREFIX = 'is-'
+
+export function styler<VariantNames extends string = string>(
+  className = '',
+  globals = [],
+  module?: Record<string, string>
+): Styler<VariantNames> {
+  const result = module?.[className] ?? className
+  return new Proxy(
+    Object.assign(
+      function instance(...variants: Array<any>) {
+        return variants
+          .flatMap(function makeVariant(variant) {
+            if (!variant) return []
+            if (Array.isArray(variant)) return variant.map(makeVariant)
+            if (typeof variant === 'function') return variant[hasClassName]
+            if (typeof variant === 'object') {
+              if (hasClassName in variant) return variant[hasClassName]
+              return Object.entries(variant)
+                .map(([cl, active]) => active && cl)
+                .filter(Boolean)
+                .map(makeVariant)
+            }
+            const requestedVariant = VARIANT_PREFIX + variant
+            return module?.[requestedVariant] ?? requestedVariant
+          })
+          .concat(globals)
+          .concat(result)
+          .join(' ')
+      },
+      {
+        [hasClassName]: result,
+        toString() {
+          return result
+        },
+        with(...extra) {
+          return styler(
+            className,
+            globals.concat(extra.filter(Boolean)),
+            module
+          )
+        },
+        mergeProps(props) {
+          if (!props) return this
+          return this.with(props.className)
+        }
       }
-    },
-    mergeProps: {
-      enumerable: false,
-      value(props: {[key: string]: any}) {
-        if (!props) return this
-        const a = props.class
-        const b = props.className
-        return styler(value, variants).with(a, a != b && b)
-      }
-    },
-    toSelector: {
-      enumerable: false,
-      value() {
-        const joined = String(value).split(' ').join('.')
-        if (joined.length > 0) return `.${joined}`
-        return ''
-      }
-    },
-    toString: {
-      value() {
-        return String(value)
+    ),
+    {
+      get(target, property) {
+        if (typeof property !== 'string') return target[property]
+        return (target[property] ??= styler(
+          className ? className + '-' + property : property,
+          undefined,
+          module
+        ))
       }
     }
-  })
+  )
 }
 
-export const styler = (
-  selector: string,
-  variants?: Map<string, string>
-): Styler => {
-  if (!variants && cache.has(selector)) return cache.get(selector)
-  const inst: any = function (...states: Array<Variant<any>>) {
-    return variant('is', inst, states, variants)
-  }
-  createStyler(inst, selector, variants)
-  cache.set(selector, inst)
-  return inst
-}
-
-export const fromModule = <M extends {[key: string]: string}>(
-  styles: M
-): ModuleStyles<M> => {
-  const res: {[key: string]: any} = {}
-  const variants: Map<string, string> = new Map()
-  for (const key of Object.keys(styles)) {
-    const parts = key.split('-')
-    if (parts[0] === 'is') variants.set(key, styles[key])
-    let parent = ''
-    let target: any = res
-    parts.forEach(sub => {
-      parent = parent ? `${parent}-${sub}` : sub
-      if (!target[sub]) target[sub] = styler(styles[parent] || parent, variants)
-      target = target[sub]
-    })
-  }
-  return res as any
+export const fromModule = <Module extends Record<string, string>>(
+  styles: Module
+) => {
+  return styler(undefined, undefined, styles) as ModuleStyles<Module>
 }
