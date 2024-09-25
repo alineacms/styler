@@ -37,22 +37,28 @@ const styles = styler(css)
 // => <div class="root_zr2ux" /> (generated class name will vary)
 
 // You can reach subclasses, separated in css by dashes, with dot access
+
 <div className={styles.root.sub()} />
 // => <div class="root-sub_zr2ux" />
 
 // Reflect state by passing objects with boolean properties or strings
+
 <a className={styles.link({active: true})} />
 // => <a class="is-active_zr2ux link_zr2ux" />
+
 <a className={styles.link('large')} />
 // => <a class="is-large_zr2ux link_zr2ux" />
+
 <a className={styles.link({active: false}, 'small')} />
 // => <a class="is-small_zr2ux link_zr2ux" />
 
 // Use `styler.global` to add a global classname
+
 <div className={styles.root(styler.global('some-external-class'))} />
 // => <div class="some-external-class root_zr2ux" />
 
 // Use `styler.merge` to add in props with a className
+
 <div className={styles.root(styler.merge({className: 'some-external-class'}))} />
 // => <div class="some-external-class root_zr2ux" />
 ```
