@@ -11,7 +11,7 @@ test('styler', () => {
   expect(styles(styles)).toBe('root root')
   expect(styles.mergeProps({className: 'x'})()).toBe('x root')
   expect(styles(styler.merge({className: 'x'}))).toBe('x root')
-  expect(styles({a: true})).toBe('is-a root')
+  expect(styles({a: true, x: '', y: 0, z: null})).toBe('is-a root')
   expect(styles({a: true, b: true})).toBe('is-a is-b root')
   expect(styles({a: true, b: true, c: false})).toBe('is-a is-b root')
   expect(styles({a: true}, {b: true})).toBe('is-a is-b root')

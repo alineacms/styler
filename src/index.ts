@@ -1,7 +1,7 @@
 const hasClassName = Symbol()
 type VariantImpl<VariantNames extends string> =
   | VariantNames
-  | {[Key in VariantNames]?: boolean}
+  | {[Key in VariantNames]?: any}
   | {[hasClassName]: string}
   | Styler
   | false
@@ -36,7 +36,7 @@ type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
   ? I
   : never
 
-export type ModuleStyles<M = {}> = {} extends M
+export type ModuleStyles<M = object> = object extends M
   ? GenericStyles
   : UnionToIntersection<Style<keyof M>>
 
@@ -101,7 +101,7 @@ export function styler(
       get(target, property) {
         if (typeof property !== 'string') return target[property]
         return (target[property] ??= styler(
-          className ? className + '-' + property : property,
+          className ? `${className}-${property}` : property,
           undefined,
           module
         ))
