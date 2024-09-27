@@ -1,6 +1,6 @@
 {
   "name": "@alinea/styler",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -15,14 +15,12 @@
   "sideEffects": false,
   "devDependencies": {
     "@types/bun": "latest",
+    "@biomejs/biome": "^1.9.2",
+    "esbuild": "^0.23.0",
     "typescript": "^5.5.4"
   },
   "scripts": {
     "build": "tsc && esbuild ./src/index.ts --outdir=dist",
     "prepublishOnly": "bun run build"
-  },
-  "dependencies": {
-    "@biomejs/biome": "^1.9.2",
-    "esbuild": "^0.23.0"
   }
 }
