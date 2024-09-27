@@ -1,4 +1,4 @@
-const hasClassName = Symbol()
+const hasClassName = Symbol.for('@alinea/styler/hasClassName')
 type VariantImpl<VariantNames extends string> =
   | VariantNames
   | {[Key in VariantNames]?: any}
